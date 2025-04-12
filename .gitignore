@@ -8,5 +8,10 @@ Icon?
 ehthumbs.db
 Thumbs.db
 
-## IDE ###
+### IDE ###
 .idea
+
+### Klipper ###
+printer-????????_??????.cfg
+*.backup
+crowsnest.conf.*
