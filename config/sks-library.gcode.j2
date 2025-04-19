@@ -1,0 +1,12 @@
+{% macro getSetting(setting_name, is_required = false) -%}
+	{% set value = none -%}
+	{% if 'save_variables' in printer -%}
+		{% set vars = printer.save_variables.variables -%}
+		{% if setting_name in vars -%}
+			{% set value = vars[setting_name] -%}
+		{% elif is_required -%}
+			LOG TYPE=ERROR MSG="[{SELF}] Required setting \"{setting_name}\" not found in save_variables"
+		{% endif -%}
+	{% endif -%}
+	{value}
+{%- endmacro -%}
