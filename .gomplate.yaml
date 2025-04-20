@@ -1,0 +1,8 @@
+inputDir: src/macro/
+outputDir: dist/macro/
+
+datasources:
+  sks:
+    url: config/globals.yaml
+  sksJinjaMacros:
+    url: config/jinjaMacros.gcode.j2
