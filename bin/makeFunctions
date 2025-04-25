@@ -1,0 +1,239 @@
+#!/bin/bash
+
+INDENT='  '
+
+# Configure log levels
+LOG_LEVEL=0
+LOG_ERROR=1
+LOG_WARNING=2
+LOG_INFO=4
+LOG_SUCCESS=8
+LOG_SKIPPED=16
+LOG_DEBUG=32
+LOG_ALL=-1
+
+# SET_LOG_LEVEL is a comma delimited list of log levels to enable
+# Loop through the list and set the corresponding bits in LOG_LEVEL
+if [ -n "$SET_LOG_LEVEL" ]; then
+	IFS=',' read -r -a logLevels <<< "$SET_LOG_LEVEL"
+	for level in "${logLevels[@]}"; do
+		# Convert the level to uppercase
+		level=$(echo "$level" | tr '[:lower:]' '[:upper:]')
+		case $level in
+			ERROR) LOG_LEVEL=$((LOG_LEVEL | LOG_ERROR)) ;;
+			WARNING) LOG_LEVEL=$((LOG_LEVEL | LOG_WARNING)) ;;
+			INFO) LOG_LEVEL=$((LOG_LEVEL | LOG_INFO)) ;;
+			SUCCESS) LOG_LEVEL=$((LOG_LEVEL | LOG_SUCCESS)) ;;
+			SKIPPED) LOG_LEVEL=$((LOG_LEVEL | LOG_SKIPPED)) ;;
+			DEBUG) LOG_LEVEL=$((LOG_LEVEL | LOG_DEBUG)) ;;
+			ALL) LOG_LEVEL=$LOG_ALL ;;
+			DEFAULT) LOG_LEVEL=$LOG_ALL-$LOG_DEBUG ;;
+		esac
+	done
+else
+	# Default log level is LOG_ALL except LOG_DEBUG
+	LOG_LEVEL=$LOG_ALL-$LOG_DEBUG
+fi
+
+# Foreground Colors
+COLOR_NONE='\033[0m'
+COLOR_BLACK='\033[0;30m’'
+COLOR_GRAY='\033[1;30m'
+COLOR_LIGHT_GRAY='\033[0;37m'
+COLOR_WHITE='\033[1;37m'
+COLOR_RED='\033[0;31m'
+COLOR_LIGHT_RED='\033[1;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_LIGHT_GREEN='\033[1;32m'
+COLOR_YELLOW='\033[0;33m'
+COLOR_LIGHT_YELLOW='\033[1;33m'
+COLOR_BLUE='\033[0;34m'
+COLOR_LIGHT_BLUE='\033[1;34m'
+COLOR_MAGENTA='\033[0;35m'
+COLOR_LIGHT_MAGENTA='\033[1;35m'
+COLOR_CYAN='\033[0;36m'
+COLOR_LIGHT_CYAN='\033[1;36m'
+
+# Background Colors
+COLOR_BG_BLACK='\033[0;40m'
+COLOR_BG_GRAY='\033[1;40m'
+COLOR_BG_LIGHT_GRAY='\033[0;47m'
+COLOR_BG_WHITE='\033[1;47m'
+COLOR_BG_RED='\033[0;41m'
+COLOR_BG_LIGHT_RED='\033[1;41m'
+COLOR_BG_GREEN='\033[0;42m'
+COLOR_BG_LIGHT_GREEN='\033[1;42m'
+COLOR_BG_YELLOW='\033[0;43m'
+COLOR_BG_LIGHT_YELLOW='\033[1;43m'
+COLOR_BG_BLUE='\033[0;44m'
+COLOR_BG_LIGHT_BLUE='\033[1;44m'
+COLOR_BG_MAGENTA='\033[0;45m'
+COLOR_BG_LIGHT_MAGENTA='\033[1;45m'
+COLOR_BG_CYAN='\033[0;46m'
+COLOR_BG_LIGHT_CYAN='\033[1;46m'
+COLOR_BG_NONE='\033[0m'
+
+# Font Styling
+FONT_BOLD='\033[1m'
+FONT_UNDERLINE='\033[4m'
+FONT_STRIKETHROUGH='\033[9m'
+FONT_INVERT='\033[7m'
+FONT_ITALIC='\033[3m'
+
+# Test all colors
+#echo -e "${COLOR_NONE}None${COLOR_NONE}"
+#echo -e "${COLOR_BLACK}Black${COLOR_NONE}"
+#echo -e "${COLOR_GRAY}Gray${COLOR_NONE}"
+#echo -e "${COLOR_LIGHT_GRAY}Light Gray${COLOR_NONE}"
+#echo -e "${COLOR_WHITE}White${COLOR_NONE}"
+#echo -e "${COLOR_RED}Red${COLOR_NONE}"
+#echo -e "${COLOR_LIGHT_RED}Light Red${COLOR_NONE}"
+#echo -e "${COLOR_GREEN}Green${COLOR_NONE}"
+#echo -e "${COLOR_LIGHT_GREEN}Light Green${COLOR_NONE}"
+#echo -e "${COLOR_YELLOW}Yellow${COLOR_NONE}"
+#echo -e "${COLOR_LIGHT_YELLOW}Light Yellow${COLOR_NONE}"
+#echo -e "${COLOR_BLUE}Blue${COLOR_NONE}"
+#echo -e "${COLOR_LIGHT_BLUE}Light Blue${COLOR_NONE}"
+#echo -e "${COLOR_MAGENTA}Magenta${COLOR_NONE}"
+#echo -e "${COLOR_LIGHT_MAGENTA}Light Magenta${COLOR_NONE}"
+#echo -e "${COLOR_CYAN}Cyan${COLOR_NONE}"
+#echo -e "${COLOR_LIGHT_CYAN}Light Cyan${COLOR_NONE}"
+#echo -e "${COLOR_BG_NONE}None${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_BLACK}Black${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_GRAY}Gray${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_LIGHT_GRAY}Light Gray${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_WHITE}White${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_RED}Red${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_LIGHT_RED}Light Red${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_GREEN}Green${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_LIGHT_GREEN}Light Green${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_YELLOW}Yellow${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_LIGHT_YELLOW}Light Yellow${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_BLUE}Blue${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_LIGHT_BLUE}Light Blue${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_MAGENTA}Magenta${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_LIGHT_MAGENTA}Light Magenta${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_CYAN}Cyan${COLOR_BG_NONE}"
+#echo -e "${COLOR_BG_LIGHT_CYAN}Light Cyan${COLOR_BG_NONE}"
+#echo -e "${FONT_BOLD}Bold${COLOR_NONE}"
+#echo -e "${FONT_UNDERLINE}Underline${COLOR_NONE}"
+#echo -e "${FONT_STRIKETHROUGH}Strikethrough${COLOR_NONE}"
+#echo -e "${FONT_INVERT}Invert${COLOR_NONE}"
+#echo -e "${FONT_ITALIC}Italic${COLOR_NONE}"
+
+# If color is disabled, set all colors to none
+if [ "$COLOR" = "false" ]; then
+	COLOR_NONE=''
+	COLOR_BLACK=''
+	COLOR_GRAY=''
+	COLOR_LIGHT_GRAY=''
+	COLOR_WHITE=''
+	COLOR_RED=''
+	COLOR_LIGHT_RED=''
+	COLOR_GREEN=''
+	COLOR_LIGHT_GREEN=''
+	COLOR_YELLOW=''
+	COLOR_LIGHT_YELLOW=''
+	COLOR_BLUE=''
+	COLOR_LIGHT_BLUE=''
+	COLOR_MAGENTA=''
+	COLOR_LIGHT_MAGENTA=''
+	COLOR_CYAN=''
+	COLOR_LIGHT_CYAN=''
+	FONT_BOLD=''
+	FONT_UNDERLINE=''
+	FONT_BLINK=''
+	FONT_STRIKETHROUGH=''
+	FONT_INVERT=''
+fi
+
+cliHeader() {
+	# Only show messages if LOG_LEVEL allows it
+	if [ $((LOG_LEVEL & LOG_WARNING)) -eq 0 ]; then
+		return
+	fi
+	
+	text=$1
+	# Repeat the character "═" for the length of the first argument
+	line=$(printf '═%.0s' $(seq 1 $(echo -n $text | wc -c)))
+	# Apply color to text
+	text=$(echo -e "${COLOR_NONE}$text${COLOR_NONE}")
+	echo
+	echo -e "${INDENT}${COLOR_LIGHT_BLUE}╒═══$line═══╕${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_BLUE}│   $text   ${COLOR_LIGHT_BLUE}│${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_BLUE}╘═══$line═══╛${COLOR_NONE}"
+	echo
+}
+
+# Log functions
+logInfo() {
+	# Only show messages if LOG_LEVEL allows it
+	if [ $((LOG_LEVEL & LOG_INFO)) -eq 0 ]; then
+		return
+	fi
+	
+	text=$1
+	echo -e "${INDENT}${COLOR_NONE}[${COLOR_LIGHT_BLUE}INFO${COLOR_NONE}] $text${COLOR_NONE}"
+}
+
+logWarning() {
+	# Only show messages if LOG_LEVEL allows it
+	if [ $((LOG_LEVEL & LOG_WARNING)) -eq 0 ]; then
+		return
+	fi
+	
+	text=$1
+	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}‼️  ${COLOR_NONE}[${COLOR_LIGHT_YELLOW}WARNING${COLOR_NONE}]${COLOR_NONE} $text${COLOR_NONE}"
+}
+
+logError() {
+	# Only show messages if LOG_LEVEL allows it
+	if [ $((LOG_LEVEL & LOG_ERROR)) -eq 0 ]; then
+		return
+	fi
+	
+	text=$1
+	echo -e "${INDENT}${COLOR_RED}X  ${COLOR_NONE}[${COLOR_RED}ERROR${COLOR_NONE}]${COLOR_NONE} $text${COLOR_NONE}"
+}
+
+logSuccess() {
+	# Only show messages if LOG_LEVEL allows it
+	if [ $((LOG_LEVEL & LOG_SUCCESS)) -eq 0 ]; then
+		return
+	fi
+	
+	text=$1
+	echo -e "${INDENT}${COLOR_LIGHT_GREEN}✔️  ${COLOR_NONE}[${COLOR_LIGHT_GREEN}SUCCESS${COLOR_NONE}]${COLOR_NONE} $text${COLOR_NONE}"
+}
+
+logSkipped() {
+	# Only show messages if LOG_LEVEL allows it
+	if [ $((LOG_LEVEL & LOG_SKIPPED)) -eq 0 ]; then
+		return
+	fi
+	
+	text=$1
+	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}⚡️ ${COLOR_NONE}[${COLOR_GRAY}SKIPPED${COLOR_NONE}] $text${COLOR_NONE}"
+}
+
+logDebug() {
+	# Only show messages if LOG_LEVEL allows it
+	if [ $((LOG_LEVEL & LOG_DEBUG)) -eq 0 ]; then
+		return
+	fi
+	
+	text=$1
+	echo -e "${INDENT}${COLOR_GRAY}»  ${COLOR_NONE}[${COLOR_GRAY}DEBUG${COLOR_NONE}] $text${COLOR_NONE}"
+}
+
+generateTargetHelpDocs() {
+	docPrefix=$1
+	makeFileList=$2
+	leftColumnWidth=25
+	rightColumnWidth=$((70-$leftColumnWidth))
+	leftLine=$(printf '─%.0s' $(seq 1 $(($leftColumnWidth-2))))
+	rightLine=$(printf '─%.0s' $(seq 1 $(($rightColumnWidth-2))))
+	awk "BEGIN { printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}Name\", \"${INDENT}Summary\"; printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}${leftLine}\", \"${INDENT}${rightLine}\"; } /^[a-zA-Z0-9_:\\-\\\\]+:.*?$docPrefix / { gsub(/\\\\:/, \":\", \$\$1); match(\$0, /^([a-zA-Z0-9_:\\-\\\\]+):.*?$docPrefix (.*)$/, groups); printf \"${INDENT}%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", groups[1], groups[2]; }" $makeFileList
+	echo
+	logInfo "Usage: \`make [target1] [target2] ...\`"
+}
