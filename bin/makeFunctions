@@ -153,15 +153,38 @@ cliHeader() {
 		return
 	fi
 	
-	text=$1
-	# Repeat the character "═" for the length of the first argument
-	line=$(printf '═%.0s' $(seq 1 $(echo -n $text | wc -c)))
-	# Apply color to text
-	text=$(echo -e "${COLOR_NONE}$text${COLOR_NONE}")
+	TEXT=$1
+	CURRENT_TARGET=$2
+	STYLE="primary"
+	
+	if [[ -n "$MAKE_GOALS" && -n "$CURRENT_TARGET" ]]; then
+		#process $MAKE_GOALS into an array with each value having a $ at the beginning and end of each string
+		IFS=',' read -r -a GOALS <<< "$MAKE_GOALS"
+		for i in "${!GOALS[@]}"; do
+			GOALS[$i]=" ${GOALS[$i]} "
+		done
+		# Join the array into a string with commas
+		GOALS_STRING=$(IFS=''; echo "${GOALS[*]}")
+		# If the goals don't contain $CURRENT_TARGET make it a secondary header
+		if [[ $GOALS_STRING != *" $CURRENT_TARGET "* ]]; then
+			STYLE="secondary"
+		fi
+	fi
+	
 	echo
-	echo -e "${INDENT}${COLOR_LIGHT_BLUE}╒═══$line═══╕${COLOR_NONE}"
-	echo -e "${INDENT}${COLOR_LIGHT_BLUE}│   $text   ${COLOR_LIGHT_BLUE}│${COLOR_NONE}"
-	echo -e "${INDENT}${COLOR_LIGHT_BLUE}╘═══$line═══╛${COLOR_NONE}"
+	if [ "$STYLE" = "secondary" ]; then
+		# Secondary header
+		echo -e "${INDENT}${COLOR_LIGHT_BLUE}══╡${COLOR_NONE} $TEXT${COLOR_NONE} ${COLOR_LIGHT_BLUE}╞══${COLOR_NONE}"
+	else
+		# Primary header
+		# Repeat the character "═" for the length of the first argument
+		LINE=$(printf '═%.0s' $(seq 1 $(echo -n $TEXT | wc -c)))
+		# Apply color to TEXT
+		TEXT=$(echo -e "${COLOR_NONE}$TEXT${COLOR_NONE}")
+		echo -e "${INDENT}${COLOR_LIGHT_BLUE}╒═══$LINE═══╕${COLOR_NONE}"
+		echo -e "${INDENT}${COLOR_LIGHT_BLUE}│   $TEXT   ${COLOR_LIGHT_BLUE}│${COLOR_NONE}"
+		echo -e "${INDENT}${COLOR_LIGHT_BLUE}╘═══$LINE═══╛${COLOR_NONE}"
+	fi
 	echo
 }
 
@@ -171,9 +194,10 @@ logInfo() {
 	if [ $((LOG_LEVEL & LOG_INFO)) -eq 0 ]; then
 		return
 	fi
+	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_NONE}[${COLOR_LIGHT_BLUE}INFO${COLOR_NONE}] $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_NONE}[${COLOR_LIGHT_BLUE}INFO${COLOR_NONE}${DEBUG_TIME}] $text${COLOR_NONE}"
 }
 
 logWarning() {
@@ -181,9 +205,10 @@ logWarning() {
 	if [ $((LOG_LEVEL & LOG_WARNING)) -eq 0 ]; then
 		return
 	fi
+	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}‼️  ${COLOR_NONE}[${COLOR_LIGHT_YELLOW}WARNING${COLOR_NONE}]${COLOR_NONE} $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}‼️  ${COLOR_NONE}[${COLOR_LIGHT_YELLOW}WARNING${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} $text${COLOR_NONE}"
 }
 
 logError() {
@@ -191,9 +216,10 @@ logError() {
 	if [ $((LOG_LEVEL & LOG_ERROR)) -eq 0 ]; then
 		return
 	fi
+	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_RED}X  ${COLOR_NONE}[${COLOR_RED}ERROR${COLOR_NONE}]${COLOR_NONE} $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_RED}X  ${COLOR_NONE}[${COLOR_RED}ERROR${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} $text${COLOR_NONE}"
 }
 
 logSuccess() {
@@ -201,9 +227,10 @@ logSuccess() {
 	if [ $((LOG_LEVEL & LOG_SUCCESS)) -eq 0 ]; then
 		return
 	fi
+	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_LIGHT_GREEN}✔️  ${COLOR_NONE}[${COLOR_LIGHT_GREEN}SUCCESS${COLOR_NONE}]${COLOR_NONE} $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_GREEN}✔️  ${COLOR_NONE}[${COLOR_LIGHT_GREEN}SUCCESS${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} $text${COLOR_NONE}"
 }
 
 logSkipped() {
@@ -211,9 +238,10 @@ logSkipped() {
 	if [ $((LOG_LEVEL & LOG_SKIPPED)) -eq 0 ]; then
 		return
 	fi
+	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}⚡️ ${COLOR_NONE}[${COLOR_GRAY}SKIPPED${COLOR_NONE}] $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}⚡️ ${COLOR_NONE}[${COLOR_GRAY}SKIPPED${COLOR_NONE}${DEBUG_TIME}] $text${COLOR_NONE}"
 }
 
 logDebug() {
@@ -221,19 +249,81 @@ logDebug() {
 	if [ $((LOG_LEVEL & LOG_DEBUG)) -eq 0 ]; then
 		return
 	fi
+	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_GRAY}»  ${COLOR_NONE}[${COLOR_GRAY}DEBUG${COLOR_NONE}] $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_GRAY}»  ${COLOR_NONE}[${COLOR_GRAY}DEBUG${COLOR_NONE}${DEBUG_TIME}] $text${COLOR_NONE}"
+}
+
+refreshDebugTime() {
+	if [ $((LOG_LEVEL & LOG_DEBUG)) -eq 0 ]; then
+		DEBUG_TIME=""
+	else
+		# format: 2023-10-01 12:34:56.789
+		DEBUG_TIME=" ${COLOR_GRAY}$(date +'%Y-%m-%d %H:%M:%S.%3N')${COLOR_NONE}"
+	fi
 }
 
 generateTargetHelpDocs() {
 	docPrefix=$1
 	makeFileList=$2
 	leftColumnWidth=25
-	rightColumnWidth=$((70-$leftColumnWidth))
+	rightColumnWidth=$((75-$leftColumnWidth))
 	leftLine=$(printf '─%.0s' $(seq 1 $(($leftColumnWidth-2))))
 	rightLine=$(printf '─%.0s' $(seq 1 $(($rightColumnWidth-2))))
-	awk "BEGIN { printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}Name\", \"${INDENT}Summary\"; printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}${leftLine}\", \"${INDENT}${rightLine}\"; } /^[a-zA-Z0-9_:\\-\\\\.]+:.*?$docPrefix / { gsub(/\\\\:/, \":\", \$\$1); match(\$0, /^([a-zA-Z0-9_:\\-\\\\.]+):.*?$docPrefix (.*)$/, groups); printf \"${INDENT}%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", groups[1], groups[2]; }" $makeFileList
+	namePattern="[a-zA-Z0-9_:\\-\\][a-zA-Z0-9_:\\-\\\\.]*"
+	awk "BEGIN { printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}Name\", \"${INDENT}Summary\"; printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}${leftLine}\", \"${INDENT}${rightLine}\"; } /^${namePattern}\s*::?.*?$docPrefix / { gsub(/\\\\:/, \":\", \$\$1); match(\$0, /^(${namePattern})\s*::?.*?$docPrefix (.*)$/, groups); printf \"${INDENT}%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", groups[1], groups[2]; }" $makeFileList
 	echo
 	logInfo "Usage: \`make [target1] [target2] ...\`"
+}
+
+generateConcatenatedMacroFile() {
+	SOURCE_DIR=$1
+	BUILD_DIR=$2
+	for file in "$SOURCE_DIR"/macro/*; do cat "$file"; echo -e '\n\n\n'; done > "$BUILD_DIR"/all-macros.cfg
+}
+
+remove() {
+	# if file or directory does not actually  exist, show warning
+	if [ ! -e "$1" ]; then
+		logWarning "File or directory \"$1\" does not exist"
+		return
+	fi
+	
+	if [ -n "$DRY_RUN" ]; then
+		logInfo "DRY_RUN: Removed $1"
+	else
+		# rm -rf "$1"
+		logDebug "Removed $1"
+	fi
+}
+
+move() {
+	# if file or directory does not actually  exist, show warning
+	if [ ! -e "$1" ]; then
+		logWarning "File or directory \"$1\" does not exist"
+		return
+	fi
+	
+	if [ -n "$DRY_RUN" ]; then
+		logInfo "DRY_RUN: Moved $1 to $2"
+	else
+		# mv "$1" "$2"
+		logDebug "Moved $1 to $2"
+	fi
+}
+
+copy() {
+	# if file or directory does not actually  exist, show warning
+	if [ ! -e "$1" ]; then
+		logWarning "File or directory \"$1\" does not exist"
+		return
+	fi
+	
+	if [ -n "$DRY_RUN" ]; then
+		logInfo "DRY_RUN: Copied $1 to $2"
+	else
+		# cp -r "$1" "$2"
+		logDebug "Copied $1 to $2"
+	fi
 }
