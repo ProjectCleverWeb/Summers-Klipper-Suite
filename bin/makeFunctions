@@ -271,7 +271,7 @@ generateTargetHelpDocs() {
 	rightColumnWidth=$((75-$leftColumnWidth))
 	leftLine=$(printf '─%.0s' $(seq 1 $(($leftColumnWidth-2))))
 	rightLine=$(printf '─%.0s' $(seq 1 $(($rightColumnWidth-2))))
-	namePattern="[a-zA-Z0-9_:\\-\\][a-zA-Z0-9_:\\-\\\\.]*"
+	namePattern="[a-zA-Z0-9_:\\-\\\\][a-zA-Z0-9_:\\-\\\\.]*"
 	awk "BEGIN { printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}Name\", \"${INDENT}Summary\"; printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}${leftLine}\", \"${INDENT}${rightLine}\"; } /^${namePattern}\s*::?.*?$docPrefix / { gsub(/\\\\:/, \":\", \$\$1); match(\$0, /^(${namePattern})\s*::?.*?$docPrefix (.*)$/, groups); printf \"${INDENT}%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", groups[1], groups[2]; }" $makeFileList
 	echo
 	logInfo "Usage: \`make [target1] [target2] ...\`"
