@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Utility variables
+TRUE=0
+FALSE=1
+
 INDENT='  '
 
 # Configure log levels
@@ -171,21 +175,21 @@ cliHeader() {
 		fi
 	fi
 	
-	echo
+	echo >&2
 	if [ "$STYLE" = "secondary" ]; then
 		# Secondary header
-		echo -e "${INDENT}${COLOR_LIGHT_BLUE}══╡${COLOR_NONE} $TEXT${COLOR_NONE} ${COLOR_LIGHT_BLUE}╞══${COLOR_NONE}"
+		echo -e "${INDENT}${COLOR_LIGHT_BLUE}══╡${COLOR_NONE} $TEXT${COLOR_NONE} ${COLOR_LIGHT_BLUE}╞══${COLOR_NONE}" >&2
 	else
 		# Primary header
 		# Repeat the character "═" for the length of the first argument
 		LINE=$(printf '═%.0s' $(seq 1 $(echo -n $TEXT | wc -c)))
 		# Apply color to TEXT
 		TEXT=$(echo -e "${COLOR_NONE}$TEXT${COLOR_NONE}")
-		echo -e "${INDENT}${COLOR_LIGHT_BLUE}╒═══$LINE═══╕${COLOR_NONE}"
-		echo -e "${INDENT}${COLOR_LIGHT_BLUE}│   $TEXT   ${COLOR_LIGHT_BLUE}│${COLOR_NONE}"
-		echo -e "${INDENT}${COLOR_LIGHT_BLUE}╘═══$LINE═══╛${COLOR_NONE}"
+		echo -e "${INDENT}${COLOR_LIGHT_BLUE}╒═══$LINE═══╕${COLOR_NONE}" >&2
+		echo -e "${INDENT}${COLOR_LIGHT_BLUE}│   $TEXT   ${COLOR_LIGHT_BLUE}│${COLOR_NONE}" >&2
+		echo -e "${INDENT}${COLOR_LIGHT_BLUE}╘═══$LINE═══╛${COLOR_NONE}" >&2
 	fi
-	echo
+	echo >&2
 }
 
 # Log functions
@@ -197,7 +201,7 @@ logInfo() {
 	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_NONE}[${COLOR_LIGHT_BLUE}INFO${COLOR_NONE}${DEBUG_TIME}] $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_BLUE}i  ${COLOR_NONE}[${COLOR_LIGHT_BLUE}INFO${COLOR_NONE}${DEBUG_TIME}] ${COLOR_LIGHT_BLUE}$text${COLOR_NONE}" >&2
 }
 
 logWarning() {
@@ -208,7 +212,7 @@ logWarning() {
 	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}‼️  ${COLOR_NONE}[${COLOR_LIGHT_YELLOW}WARNING${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}‼️  ${COLOR_NONE}[${COLOR_LIGHT_YELLOW}WARNING${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} ${COLOR_LIGHT_YELLOW}$text${COLOR_NONE}" >&2
 }
 
 logError() {
@@ -219,7 +223,7 @@ logError() {
 	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_RED}X  ${COLOR_NONE}[${COLOR_RED}ERROR${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_RED}X  ${COLOR_NONE}[${COLOR_RED}ERROR${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} ${COLOR_RED}$text${COLOR_NONE}" >&2
 }
 
 logSuccess() {
@@ -230,7 +234,7 @@ logSuccess() {
 	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_LIGHT_GREEN}✔️  ${COLOR_NONE}[${COLOR_LIGHT_GREEN}SUCCESS${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_GREEN}✔️  ${COLOR_NONE}[${COLOR_LIGHT_GREEN}SUCCESS${COLOR_NONE}${DEBUG_TIME}]${COLOR_NONE} ${COLOR_LIGHT_GREEN}$text${COLOR_NONE}" >&2
 }
 
 logSkipped() {
@@ -241,7 +245,7 @@ logSkipped() {
 	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}⚡️ ${COLOR_NONE}[${COLOR_GRAY}SKIPPED${COLOR_NONE}${DEBUG_TIME}] $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_LIGHT_YELLOW}⚡️ ${COLOR_NONE}[${COLOR_GRAY}SKIPPED${COLOR_NONE}${DEBUG_TIME}] $text${COLOR_NONE}" >&2
 }
 
 logDebug() {
@@ -252,7 +256,14 @@ logDebug() {
 	refreshDebugTime
 	
 	text=$1
-	echo -e "${INDENT}${COLOR_GRAY}»  ${COLOR_NONE}[${COLOR_GRAY}DEBUG${COLOR_NONE}${DEBUG_TIME}] $text${COLOR_NONE}"
+	echo -e "${INDENT}${COLOR_GRAY}»  ${COLOR_NONE}[${COLOR_GRAY}DEBUG${COLOR_NONE}${DEBUG_TIME}] ${COLOR_GRAY}$text${COLOR_NONE}" >&2
+}
+
+pathHighlight() {
+	local PATH
+	PATH=$1
+	
+	echo -e "${COLOR_LIGHT_RED}\`${COLOR_LIGHT_MAGENTA}$PATH${COLOR_LIGHT_RED}\`${COLOR_NONE}"
 }
 
 refreshDebugTime() {
@@ -271,8 +282,11 @@ generateTargetHelpDocs() {
 	rightColumnWidth=$((75-$leftColumnWidth))
 	leftLine=$(printf '─%.0s' $(seq 1 $(($leftColumnWidth-2))))
 	rightLine=$(printf '─%.0s' $(seq 1 $(($rightColumnWidth-2))))
+	leftTitle="Name"
+	rightTitle="Summary"
 	namePattern="[a-zA-Z0-9_:\\-\\\\][a-zA-Z0-9_:\\-\\\\.]*"
-	awk "BEGIN { printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}Name\", \"${INDENT}Summary\"; printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}${leftLine}\", \"${INDENT}${rightLine}\"; } /^${namePattern}\s*::?.*?$docPrefix / { gsub(/\\\\:/, \":\", \$\$1); match(\$0, /^(${namePattern})\s*::?.*?$docPrefix (.*)$/, groups); printf \"${INDENT}%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", groups[1], groups[2]; }" $makeFileList
+	delimiterPattern="\s*::?.*?$docPrefix"
+	awk "BEGIN { printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}${leftTitle}\", \"${INDENT}${rightTitle}\"; printf \"%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", \"${INDENT}${leftLine}\", \"${INDENT}${rightLine}\"; } /^${namePattern}${delimiterPattern} / { gsub(/\\\\:/, \":\", \$\$1); match(\$0, /^(${namePattern})${delimiterPattern} (.*)$/, groups); printf \"${INDENT}%-${leftColumnWidth}s %-${rightColumnWidth}s\n\", groups[1], groups[2]; }" $makeFileList
 	echo
 	logInfo "Usage: \`make [target1] [target2] ...\`"
 }
@@ -284,46 +298,139 @@ generateConcatenatedMacroFile() {
 }
 
 remove() {
-	# if file or directory does not actually  exist, show warning
-	if [ ! -e "$1" ]; then
-		logWarning "File or directory \"$1\" does not exist"
+	local SRC
+	SRC="$(getPath "$1")"
+	
+	if [ "$(sourceExists "$SRC")" = "$FALSE" ]; then
+		logSkipped "Remove Failed: File or directory $(pathHighlight "$SRC") does not exist"
 		return
 	fi
 	
 	if [ -n "$DRY_RUN" ]; then
-		logInfo "DRY_RUN: Removed $1"
+		logInfo "DRY_RUN: Removed $(pathHighlight "$SRC")"
 	else
-		# rm -rf "$1"
-		logDebug "Removed $1"
+		rm -rf "$SRC"
+		logDebug "Removed $(pathHighlight "$SRC")"
 	fi
 }
 
 move() {
-	# if file or directory does not actually  exist, show warning
-	if [ ! -e "$1" ]; then
-		logWarning "File or directory \"$1\" does not exist"
+	local SRC
+	local DEST
+	SRC="$(getPath "$1")"
+	DEST="$(getPath "$2")"
+	
+	if [ "$(sourceExists "$SRC")" = "$FALSE" ]; then
+		logError "Move Failed: File or directory $(pathHighlight "$SRC") does not exist"
+		return
+	fi
+	if [ "$(destinationExists "$DEST" 1)" = "$TRUE" ]; then
+		logError "Move Failed: File or directory $(pathHighlight "$DEST") already exists"
 		return
 	fi
 	
 	if [ -n "$DRY_RUN" ]; then
-		logInfo "DRY_RUN: Moved $1 to $2"
+		logInfo "DRY_RUN: Moved $(pathHighlight "$SRC") to $(pathHighlight "$DEST")"
 	else
-		# mv "$1" "$2"
-		logDebug "Moved $1 to $2"
+		mv "$SRC" "$DEST"
+		logDebug "Moved $(pathHighlight "$SRC") to $(pathHighlight "$DEST")"
 	fi
 }
 
 copy() {
-	# if file or directory does not actually  exist, show warning
-	if [ ! -e "$1" ]; then
-		logWarning "File or directory \"$1\" does not exist"
+	local SRC
+	local DEST
+	SRC="$(getPath "$1")"
+	DEST="$(getPath "$2")"
+	
+	logDebug "Copying $(pathHighlight "$SRC") to $(pathHighlight "$DEST")"
+	
+	if [ "$(sourceExists "$SRC")" = "$FALSE" ]; then
+		logError "Copy Failed: File or directory $(pathHighlight "$SRC") does not exist"
+		return
+	fi
+	if [ "$(destinationExists "$DEST" 1)" = "$TRUE" ]; then
+		logError "Copy Failed: File or directory $(pathHighlight "$DEST") already exists"
 		return
 	fi
 	
 	if [ -n "$DRY_RUN" ]; then
-		logInfo "DRY_RUN: Copied $1 to $2"
+		logInfo "DRY_RUN: Copied $(pathHighlight "$SRC") to $(pathHighlight "$DEST")"
 	else
-		# cp -r "$1" "$2"
-		logDebug "Copied $1 to $2"
+		cp -r "$SRC" "$DEST"
+		logDebug "Copied $(pathHighlight "$SRC") to $(pathHighlight "$DEST")"
 	fi
 }
+
+createDir() {
+	local SRC
+	SRC="$(getPath "$1")"
+	
+	# if directory does not actually exist, show warning
+	if [ "$(destinationExists "$SRC")" = "$TRUE" ]; then
+		logSkipped "Create Directory Failed: Directory $(pathHighlight "$SRC") already exists"
+		return
+	fi
+	
+	if [ -n "$DRY_RUN" ]; then
+		logInfo "DRY_RUN: Created directory $(pathHighlight "$SRC")"
+	else
+		mkdir -p "$(getPath "$SRC")"
+		logDebug "Created directory $(pathHighlight "$SRC")"
+	fi
+}
+
+getPath() {
+	local SRC
+	SRC="$1"
+	
+	# If the path is relative, prefix it with the current directory
+	if [[ "$SRC" != /* ]]; then
+		SRC="$(pwd)/$SRC"
+		# make a real path or return the original path
+		SRC=$(realpath "$SRC" 2>/dev/null || echo "$SRC")
+		echo "$SRC"
+	else
+		echo "$SRC"
+	fi
+}
+
+destinationExists() {
+	local DEST
+	local REMOVE_EMPTY
+	DEST="$(getPath "$1")"
+	REMOVE_EMPTY="$2"
+	
+	if [ -e "$DEST" ]; then
+		if [ -d "$DEST" ] && [ "$(ls -A "$DEST")" ]; then
+			echo $TRUE
+			return
+		elif [ -f "$DEST" ] && [ -s "$DEST" ]; then
+			echo $TRUE
+			return
+		fi
+		if [ -n "$REMOVE_EMPTY" ]; then
+			logDebug "Destination Exists: File or directory $(pathHighlight "$DEST") already exists but is empty, removing it"
+			remove "$DEST"
+			echo $FALSE
+			return
+		fi
+		echo $TRUE
+		return
+	fi
+	
+	echo $FALSE
+}
+
+sourceExists() {
+	local SRC
+	SRC="$(getPath "$1")"
+	
+	if [ -e "$SRC" ]; then
+		echo $TRUE
+		return
+	fi
+	
+	echo $FALSE
+}
+
